@@ -26,9 +26,9 @@ Then install and activate `Social Meta Tags` under Admin CP â†’ Configuration â†
 
 ## Theme Integration
 
-Activation automatically inserts `{$social_meta_tags}` before `{$stylesheets}` in the `headerinclude` template. The injected variable renders the complete Open Graph and Twitter metadata block. Deactivation removes the insertion.
+The Sick Gaming theme ships with a marker-delimited fallback block built from core MyBB and theme values. Activation removes that fallback and inserts `{$social_meta_tags}` before `{$stylesheets}`. The injected variable renders the configured Open Graph and Twitter metadata block. Deactivation removes the plugin variable and restores the basic fallback.
 
-If a customized `headerinclude` template does not contain `{$stylesheets}`, add this variable manually:
+If a customized `headerinclude` template lacks `{}`, automatic replacement cannot run. Add this variable manually and remove any duplicate social meta tags:
 
 ```html
 {$social_meta_tags}

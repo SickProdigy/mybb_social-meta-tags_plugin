@@ -60,6 +60,11 @@ function social_meta_tags_activate()
 
     find_replace_templatesets(
         'headerinclude',
+        social_meta_tags_fallback_pattern(),
+        ''
+    );
+    find_replace_templatesets(
+        'headerinclude',
         '#' . preg_quote('{$social_meta_tags}') . '#i',
         ''
     );
@@ -79,6 +84,36 @@ function social_meta_tags_deactivate()
         '#' . preg_quote('{$social_meta_tags}') . '#i',
         ''
     );
+    find_replace_templatesets(
+        'headerinclude',
+        social_meta_tags_fallback_pattern(),
+        ''
+    );
+    find_replace_templatesets(
+        'headerinclude',
+        '#' . preg_quote('{$stylesheets}') . '#i',
+        social_meta_tags_fallback_markup() . '{$stylesheets}'
+    );
+}
+
+function social_meta_tags_fallback_pattern()
+{
+    return '#<!-- social-meta-tags-fallback:start -->.*?<!-- social-meta-tags-fallback:end -->\s*#s';
+}
+
+function social_meta_tags_fallback_markup()
+{
+    return '<!-- social-meta-tags-fallback:start -->' . "\n"
+        . '<meta property="og:title" content="{$mybb->settings[' . "'bbname'" . ']}" />' . "\n"
+        . '<meta property="og:description" content="{$mybb->settings[' . "'bbname'" . ']}" />' . "\n"
+        . '<meta property="og:url" content="{$mybb->settings[' . "'bburl'" . ']}" />' . "\n"
+        . '<meta property="og:type" content="website" />' . "\n"
+        . '<meta property="og:image" content="{$mybb->settings[' . "'bburl'" . ']}/{$theme[' . "'logo'" . ']}" />' . "\n\n"
+        . '<meta name="twitter:card" content="summary_large_image" />' . "\n"
+        . '<meta name="twitter:title" content="{$mybb->settings[' . "'bbname'" . ']}" />' . "\n"
+        . '<meta name="twitter:description" content="{$mybb->settings[' . "'bbname'" . ']}" />' . "\n"
+        . '<meta name="twitter:image" content="{$mybb->settings[' . "'bburl'" . ']}/{$theme[' . "'logo'" . ']}" />' . "\n"
+        . '<!-- social-meta-tags-fallback:end -->' . "\n\n";
 }
 
 function social_meta_tags_ensure_settings()
