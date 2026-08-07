@@ -55,10 +55,30 @@ function social_meta_tags_uninstall()
 function social_meta_tags_activate()
 {
     social_meta_tags_ensure_settings();
+
+    require_once MYBB_ROOT . 'inc/adminfunctions_templates.php';
+
+    find_replace_templatesets(
+        'headerinclude',
+        '#' . preg_quote('{$social_meta_tags}') . '#i',
+        ''
+    );
+    find_replace_templatesets(
+        'headerinclude',
+        '#' . preg_quote('{$stylesheets}') . '#i',
+        '{$social_meta_tags}{$stylesheets}'
+    );
 }
 
 function social_meta_tags_deactivate()
 {
+    require_once MYBB_ROOT . 'inc/adminfunctions_templates.php';
+
+    find_replace_templatesets(
+        'headerinclude',
+        '#' . preg_quote('{$social_meta_tags}') . '#i',
+        ''
+    );
 }
 
 function social_meta_tags_ensure_settings()
@@ -136,7 +156,7 @@ $plugins->add_hook('showthread_start', 'social_meta_tags_build');
 function social_meta_tags_build()
 {
     global $thread, $forum, $mybb;
-    global $open_meta_title, $open_meta_description, $open_meta_url, $open_meta_type, $open_meta_image;
+    global $open_meta_title, $open_meta_description, $open_meta_url, $open_meta_type, $open_meta_image, $social_meta_tags;
 
     $board_name = isset($mybb->settings['bbname']) ? $mybb->settings['bbname'] : '';
     $board_url = isset($mybb->settings['bburl']) ? rtrim($mybb->settings['bburl'], '/') : '';
@@ -174,6 +194,15 @@ function social_meta_tags_build()
     $open_meta_url = htmlspecialchars_uni($open_meta_url);
     $open_meta_type = htmlspecialchars_uni($open_meta_type);
     $open_meta_image = htmlspecialchars_uni($open_meta_image);
+    $social_meta_tags = '<meta property="og:title" content="' . $open_meta_title . '" />' . "\n"
+        . '<meta property="og:description" content="' . $open_meta_description . '" />' . "\n"
+        . '<meta property="og:url" content="' . $open_meta_url . '" />' . "\n"
+        . '<meta property="og:type" content="' . $open_meta_type . '" />' . "\n"
+        . '<meta property="og:image" content="' . $open_meta_image . '" />' . "\n\n"
+        . '<meta name="twitter:card" content="summary_large_image" />' . "\n"
+        . '<meta name="twitter:title" content="' . $open_meta_title . '" />' . "\n"
+        . '<meta name="twitter:description" content="' . $open_meta_description . '" />' . "\n"
+        . '<meta name="twitter:image" content="' . $open_meta_image . '" />' . "\n";
 }
 
 function social_meta_tags_absolute_url($url, $board_url)

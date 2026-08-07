@@ -26,22 +26,15 @@ Then install and activate `Social Meta Tags` under Admin CP â†’ Configuration â†
 
 ## Theme Integration
 
-Add these tags to the theme's `headerinclude` template:
+Activation automatically inserts `{$social_meta_tags}` before `{$stylesheets}` in the `headerinclude` template. The injected variable renders the complete Open Graph and Twitter metadata block. Deactivation removes the insertion.
+
+If a customized `headerinclude` template does not contain `{$stylesheets}`, add this variable manually:
 
 ```html
-<meta property="og:title" content="{$open_meta_title}" />
-<meta property="og:description" content="{$open_meta_description}" />
-<meta property="og:url" content="{$open_meta_url}" />
-<meta property="og:type" content="{$open_meta_type}" />
-<meta property="og:image" content="{$open_meta_image}" />
-
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="{$open_meta_title}" />
-<meta name="twitter:description" content="{$open_meta_description}" />
-<meta name="twitter:image" content="{$open_meta_image}" />
+{$social_meta_tags}
 ```
 
-The Sick Gaming Revolution theme already contains these template references.
+The individual `{$open_meta_*}` variables remain available for themes that need custom tag markup.
 
 ## Template Variables
 
@@ -62,4 +55,4 @@ On first installation, values from the old Revolution plugin metadata settings a
 
 ## Uninstall
 
-Uninstalling removes the `Social Meta Tags` setting group and its settings. It does not modify theme templates or legacy Revolution settings.
+Uninstalling removes the `Social Meta Tags` setting group and its settings. It removes its activation-time template insertion before deleting settings and does not modify legacy Revolution settings.
