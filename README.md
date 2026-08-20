@@ -68,3 +68,9 @@ The plugin supplies social-sharing URLs through `og:url`; it does not add a sepa
 ## Uninstall
 
 Uninstalling removes the `Social Meta Tags` setting group and its settings. MyBB deactivates the plugin first, removing its template insertion. Legacy Revolution settings are not modified.
+
+## License
+
+Copyright (C) 2026 SickProdigy.
+
+This project is licensed under the GNU General Public License, version 3 or any later version.

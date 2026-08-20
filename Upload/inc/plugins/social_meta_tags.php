@@ -3,6 +3,9 @@
  * Social Meta Tags
  *
  * Open Graph and Twitter metadata for MyBB pages.
+ *
+ * Copyright (C) 2026 SickProdigy
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 if (!defined('IN_MYBB')) {
@@ -15,7 +18,7 @@ function social_meta_tags_info()
         'name' => 'Social Meta Tags',
         'description' => 'Provides configurable Open Graph and Twitter metadata variables for MyBB templates.',
         'website' => 'https://www.sickgaming.net',
-        'author' => 'Sick Gaming',
+        'author' => 'SickProdigy',
         'authorsite' => 'https://www.sickgaming.net',
         'version' => '1.0.0',
         'compatibility' => '18*'
