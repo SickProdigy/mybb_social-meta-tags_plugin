@@ -1,18 +1,21 @@
 # MyBB Social Meta Tags Plugin
 
-Standalone Open Graph and Twitter metadata plugin for MyBB 1.8.
-
-It was extracted from the Sick Gaming Revolution theme plugin so social metadata can be installed and maintained independently of any theme.
+MyBB 1.8 plugin that adds configurable Open Graph and Twitter Card metadata to board, forum, and thread pages. It works independently of the active theme and provides sensible board-level fallbacks when page-specific metadata is unavailable.
 
 ## Features
 
 - Board-level metadata fallbacks for pages without forum or thread data.
-- Forum titles, descriptions, and canonical forum URLs.
-- Thread titles, article type, canonical thread URLs, and optional thread images.
+- Forum titles, descriptions, and absolute forum URLs.
+- Thread titles, article type, absolute thread URLs, and optional thread images.
 - Configurable default description and image URL in Admin CP.
 - MyBB friendly-URL support through `get_forum_link()` and `get_thread_link()`.
 - HTML-safe template values.
 - One-time import of legacy `revolution_theme_default_meta` and `revolution_theme_logo_url` values when the new settings are first created.
+
+## Requirements
+
+- MyBB 1.8.x
+- A theme whose `headerinclude` template contains `{$stylesheets}`, or manual template integration
 
 ## Install
 
@@ -26,9 +29,9 @@ Then install and activate `Social Meta Tags` under Admin CP â†’ Configuration â†
 
 ## Theme Integration
 
-The Sick Gaming theme ships with a marker-delimited fallback block built from core MyBB and theme values. Activation removes that fallback and inserts `{$social_meta_tags}` before `{$stylesheets}`. The injected variable renders the configured Open Graph and Twitter metadata block. Deactivation removes the plugin variable and restores the basic fallback.
+Activation removes any marker-delimited fallback metadata block and inserts `{$social_meta_tags}` before `{$stylesheets}` in each theme's `headerinclude` template. The injected variable renders the configured Open Graph and Twitter metadata block. Deactivation removes the plugin variable and restores a basic fallback built from the board name, board URL, and active theme logo.
 
-If a customized `headerinclude` template lacks `{}`, automatic replacement cannot run. Add this variable manually and remove any duplicate social meta tags:
+If a customized `headerinclude` template lacks `{$stylesheets}`, automatic insertion cannot run. Add this variable manually and remove any duplicate social metadata:
 
 ```html
 {$social_meta_tags}
@@ -53,6 +56,15 @@ The plugin creates a `Social Meta Tags` setting group containing:
 
 On first installation, values from the old Revolution plugin metadata settings are copied when available. The legacy settings are not deleted automatically.
 
+## Output
+
+The generated block includes:
+
+- `og:title`, `og:description`, `og:url`, `og:type`, and `og:image`
+- `twitter:card`, `twitter:title`, `twitter:description`, and `twitter:image`
+
+The plugin supplies social-sharing URLs through `og:url`; it does not add a separate HTML `rel="canonical"` link.
+
 ## Uninstall
 
-Uninstalling removes the `Social Meta Tags` setting group and its settings. It removes its activation-time template insertion before deleting settings and does not modify legacy Revolution settings.
+Uninstalling removes the `Social Meta Tags` setting group and its settings. MyBB deactivates the plugin first, removing its template insertion. Legacy Revolution settings are not modified.
