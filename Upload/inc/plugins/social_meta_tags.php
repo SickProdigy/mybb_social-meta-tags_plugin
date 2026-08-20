@@ -20,7 +20,7 @@ function social_meta_tags_info()
         'website' => 'https://www.sickgaming.net',
         'author' => 'SickProdigy',
         'authorsite' => 'https://www.sickgaming.net',
-        'version' => '1.0.1',
+        'version' => '1.0.2',
         'compatibility' => '18*'
     );
 }
@@ -167,12 +167,18 @@ function social_meta_tags_ensure_settings()
     );
 
     foreach ($settings as $setting) {
-        $query = $db->simple_select('settings', 'sid', "name='" . $db->escape_string($setting['name']) . "'");
+        $name = $db->escape_string($setting['name']);
+        $query = $db->simple_select('settings', 'sid', "name='{$name}'", array('limit' => 1));
         $existing = $db->fetch_array($query);
 
         if (empty($existing['sid'])) {
             $db->insert_query('settings', $setting);
+            continue;
         }
+
+        $sid = (int)$existing['sid'];
+        unset($setting['value']);
+        $db->update_query('settings', $setting, "sid='{$sid}'", 1);
     }
 
     social_meta_tags_rebuild_settings();
