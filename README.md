@@ -67,6 +67,16 @@ The generated block includes:
 
 The plugin supplies social-sharing URLs through `og:url`; it does not add a separate HTML `rel="canonical"` link.
 
+## Testing
+
+Run the dependency-free test suite from the repository root:
+
+```bash
+php tests/social_meta_tags_test.php
+```
+
+The suite uses lightweight MyBB stubs and does not require a MyBB installation.
+
 ## Uninstall
 
 Uninstalling removes the `Social Meta Tags` setting group and its settings. MyBB deactivates the plugin first, removing its template insertion. Legacy Revolution settings are not modified.
