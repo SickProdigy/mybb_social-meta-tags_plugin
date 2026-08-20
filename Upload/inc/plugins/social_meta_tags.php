@@ -20,7 +20,7 @@ function social_meta_tags_info()
         'website' => 'https://www.sickgaming.net',
         'author' => 'SickProdigy',
         'authorsite' => 'https://www.sickgaming.net',
-        'version' => '1.0.0',
+        'version' => '1.0.1',
         'compatibility' => '18*'
     );
 }
@@ -232,15 +232,21 @@ function social_meta_tags_build()
     $open_meta_url = htmlspecialchars_uni($open_meta_url);
     $open_meta_type = htmlspecialchars_uni($open_meta_type);
     $open_meta_image = htmlspecialchars_uni($open_meta_image);
+    $image_meta_tags = '';
+
+    if ($open_meta_image !== '') {
+        $image_meta_tags = '<meta property="og:image" content="' . $open_meta_image . '" />' . "\n"
+            . '<meta name="twitter:image" content="' . $open_meta_image . '" />' . "\n";
+    }
+
     $social_meta_tags = '<meta property="og:title" content="' . $open_meta_title . '" />' . "\n"
         . '<meta property="og:description" content="' . $open_meta_description . '" />' . "\n"
         . '<meta property="og:url" content="' . $open_meta_url . '" />' . "\n"
         . '<meta property="og:type" content="' . $open_meta_type . '" />' . "\n"
-        . '<meta property="og:image" content="' . $open_meta_image . '" />' . "\n\n"
         . '<meta name="twitter:card" content="summary_large_image" />' . "\n"
         . '<meta name="twitter:title" content="' . $open_meta_title . '" />' . "\n"
         . '<meta name="twitter:description" content="' . $open_meta_description . '" />' . "\n"
-        . '<meta name="twitter:image" content="' . $open_meta_image . '" />' . "\n";
+        . $image_meta_tags;
 }
 
 function social_meta_tags_absolute_url($url, $board_url)

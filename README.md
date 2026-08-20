@@ -47,6 +47,8 @@ The individual `{$open_meta_*}` variables remain available for themes that need 
 - `{$open_meta_type}` — `website` or `article`.
 - `{$open_meta_image}` — thread image when available, otherwise the configured default image.
 
+When neither a thread image nor a configured default image is available, the plugin omits both `og:image` and `twitter:image` instead of rendering empty image tags.
+
 ## Settings
 
 The plugin creates a `Social Meta Tags` setting group containing:
