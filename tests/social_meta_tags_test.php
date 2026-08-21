@@ -94,6 +94,25 @@ function get_thread_link($tid)
     return 'thread-' . $tid . '.html';
 }
 
+function get_post($pid)
+{
+    global $social_meta_tags_test_posts;
+
+    return isset($social_meta_tags_test_posts[$pid])
+        ? $social_meta_tags_test_posts[$pid]
+        : array();
+}
+
+function my_strlen($value)
+{
+    return strlen($value);
+}
+
+function my_substr($value, $start, $length = null)
+{
+    return substr($value, $start, $length);
+}
+
 function rebuild_settings()
 {
 }
@@ -106,16 +125,24 @@ function social_meta_tags_test_assert($condition, $message)
     }
 }
 
-function social_meta_tags_test_render($settings, $forum_data = array(), $thread_data = array())
+function social_meta_tags_test_render($settings, $forum_data = array(), $thread_data = array(), $foruminfo_data = array())
 {
-    global $mybb, $forum, $thread, $social_meta_tags;
+    global $mybb, $forum, $foruminfo, $thread, $social_meta_tags, $headerinclude;
 
     $mybb = (object)array('settings' => $settings);
-    $forum = $forum_data;
+    $forum = array();
+    $foruminfo = array();
+    $thread = array();
+    $social_meta_tags = '';
+    $headerinclude = '';
+    social_meta_tags_build();
+    $headerinclude = "<head>\n" . $social_meta_tags . "</head>";
+    $forum = array();
+    $foruminfo = !empty($foruminfo_data) ? $foruminfo_data : $forum_data;
     $thread = $thread_data;
     social_meta_tags_build();
 
-    return $social_meta_tags;
+    return $headerinclude;
 }
 
 $plugins = new SocialMetaTagsTestPlugins();
@@ -168,18 +195,39 @@ social_meta_tags_test_assert(
     'forum output should contain an absolute forum URL'
 );
 
+$forum_with_thread_row_output = social_meta_tags_test_render(
+    $settings,
+    array('fid' => 5, 'name' => 'News & Help', 'description' => 'Forum description'),
+    array('tid' => 99, 'subject' => 'Last thread row')
+);
+social_meta_tags_test_assert(
+    strpos($forum_with_thread_row_output, 'content="News &amp; Help - Example &amp; Board"') !== false,
+    'forum output should keep the forum title when a thread row remains in global scope'
+);
+social_meta_tags_test_assert(
+    strpos($forum_with_thread_row_output, 'thread-99.html') === false,
+    'forum output should not use the last listed thread URL'
+);
+
+$social_meta_tags_test_posts = array(
+    100 => array('message' => '[b]Release notes[/b] [quote]Old quoted text[/quote] This update fixes sharing previews. [img]https://cdn.example.com/thread-first.jpg[/img]')
+);
 $thread_output = social_meta_tags_test_render(
     $settings,
     array(),
     array(
         'tid' => 42,
+        'firstpost' => 100,
         'subject' => 'Thread "Title"',
-        'image' => 'https://example.com/thread.jpg?size=1&crop=1'
     )
 );
 social_meta_tags_test_assert(
     strpos($thread_output, 'content="Thread &quot;Title&quot; - Example &amp; Board"') !== false,
     'thread titles should be escaped'
+);
+social_meta_tags_test_assert(
+    strpos($thread_output, 'content="Release notes This update fixes sharing previews."') !== false,
+    'thread descriptions should use a clean excerpt from the first post'
 );
 social_meta_tags_test_assert(
     strpos($thread_output, 'content="article"') !== false,
@@ -190,8 +238,8 @@ social_meta_tags_test_assert(
     'thread output should contain an absolute thread URL'
 );
 social_meta_tags_test_assert(
-    substr_count($thread_output, 'https://example.com/thread.jpg?size=1&amp;crop=1') === 2,
-    'an escaped thread image should override the default in both image tags'
+    substr_count($thread_output, 'https://cdn.example.com/thread-first.jpg') === 2,
+    'the first embedded post image should override the default in both image tags'
 );
 social_meta_tags_test_assert(
     strpos($thread_output, 'default.jpg') === false,

@@ -20,7 +20,7 @@ function social_meta_tags_info()
         'website' => 'https://www.sickgaming.net',
         'author' => 'SickProdigy',
         'authorsite' => 'https://www.sickgaming.net',
-        'version' => '1.0.2',
+        'version' => '1.0.3',
         'compatibility' => '18*'
     );
 }
@@ -195,12 +195,17 @@ function social_meta_tags_legacy_setting($name)
 }
 
 $plugins->add_hook('global_start', 'social_meta_tags_build');
-$plugins->add_hook('forumdisplay_start', 'social_meta_tags_build');
-$plugins->add_hook('showthread_start', 'social_meta_tags_build');
+$plugins->add_hook('forumdisplay_end', 'social_meta_tags_build');
+$plugins->add_hook('showthread_end', 'social_meta_tags_build');
 function social_meta_tags_build()
 {
-    global $thread, $forum, $mybb;
+    global $thread, $forum, $foruminfo, $mybb, $headerinclude;
     global $open_meta_title, $open_meta_description, $open_meta_url, $open_meta_type, $open_meta_image, $social_meta_tags;
+
+    $previous_social_meta_tags = isset($social_meta_tags) ? $social_meta_tags : '';
+    $forum_context = !empty($foruminfo['fid']) ? $foruminfo : $forum;
+    $is_thread_page = !empty($thread['tid'])
+        && (defined('THIS_SCRIPT') ? THIS_SCRIPT === 'showthread.php' : empty($forum_context['fid']));
 
     $board_name = isset($mybb->settings['bbname']) ? $mybb->settings['bbname'] : '';
     $board_url = isset($mybb->settings['bburl']) ? rtrim($mybb->settings['bburl'], '/') : '';
@@ -215,21 +220,27 @@ function social_meta_tags_build()
         ? $mybb->settings['social_meta_tags_default_image_url']
         : '';
 
-    if (!empty($forum['fid'])) {
-        $open_meta_title = $forum['name'] . ($board_name !== '' ? ' - ' . $board_name : '');
-        $open_meta_description = !empty($forum['description'])
-            ? $forum['description']
+    if (!empty($forum_context['fid'])) {
+        $open_meta_title = $forum_context['name'] . ($board_name !== '' ? ' - ' . $board_name : '');
+        $open_meta_description = !empty($forum_context['description'])
+            ? $forum_context['description']
             : $open_meta_description;
-        $open_meta_url = social_meta_tags_absolute_url(get_forum_link((int)$forum['fid']), $board_url);
+        $open_meta_url = social_meta_tags_absolute_url(get_forum_link((int)$forum_context['fid']), $board_url);
     }
 
-    if (!empty($thread['tid'])) {
+    if ($is_thread_page) {
         $open_meta_title = $thread['subject'] . ($board_name !== '' ? ' - ' . $board_name : '');
+        $open_meta_description = social_meta_tags_thread_description($thread, $open_meta_description);
         $open_meta_url = social_meta_tags_absolute_url(get_thread_link((int)$thread['tid']), $board_url);
         $open_meta_type = 'article';
 
         if (!empty($thread['image'])) {
             $open_meta_image = $thread['image'];
+        } else {
+            $thread_image = social_meta_tags_thread_image($thread, $board_url);
+            if ($thread_image !== '') {
+                $open_meta_image = $thread_image;
+            }
         }
     }
 
@@ -253,6 +264,89 @@ function social_meta_tags_build()
         . '<meta name="twitter:title" content="' . $open_meta_title . '" />' . "\n"
         . '<meta name="twitter:description" content="' . $open_meta_description . '" />' . "\n"
         . $image_meta_tags;
+
+    if ($previous_social_meta_tags !== '' && isset($headerinclude)) {
+        $headerinclude = str_replace($previous_social_meta_tags, $social_meta_tags, $headerinclude);
+    }
+}
+
+function social_meta_tags_thread_description($thread, $fallback)
+{
+    if (empty($thread['firstpost']) || !function_exists('get_post')) {
+        return $fallback;
+    }
+
+    $post = social_meta_tags_first_post($thread);
+
+    if (empty($post['message'])) {
+        return $fallback;
+    }
+
+    $description = $post['message'];
+    $description = preg_replace(
+        '#\[(quote|code|php|img|video)(?:=[^\]]*)?\].*?\[/\1\]#is',
+        ' ',
+        $description
+    );
+    $description = preg_replace('#\[/?[a-z][^\]]*\]#i', ' ', $description);
+    $description = html_entity_decode(strip_tags($description), ENT_QUOTES, 'UTF-8');
+    $description = trim(preg_replace('/\s+/u', ' ', $description));
+
+    if ($description === '') {
+        return $fallback;
+    }
+
+    if (my_strlen($description) > 200) {
+        $description = rtrim(my_substr($description, 0, 197)) . '...';
+    }
+
+    return $description;
+}
+
+function social_meta_tags_thread_image($thread, $board_url)
+{
+    $post = social_meta_tags_first_post($thread);
+
+    if (empty($post['message'])) {
+        return '';
+    }
+
+    $image_url = '';
+
+    if (preg_match('#\[img(?:=[^\]]*)?\](.*?)\[/img\]#is', $post['message'], $matches)) {
+        $image_url = trim($matches[1]);
+    } elseif (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $post['message'], $matches)) {
+        $image_url = trim($matches[1]);
+    }
+
+    $image_url = html_entity_decode($image_url, ENT_QUOTES, 'UTF-8');
+
+    if ($image_url === '' || preg_match('#^(?:data|javascript):#i', $image_url)) {
+        return '';
+    }
+
+    if (strpos($image_url, '//') === 0) {
+        return 'https:' . $image_url;
+    }
+
+    return social_meta_tags_absolute_url($image_url, $board_url);
+}
+
+function social_meta_tags_first_post($thread)
+{
+    static $posts = array();
+
+    if (empty($thread['firstpost']) || !function_exists('get_post')) {
+        return array();
+    }
+
+    $pid = (int)$thread['firstpost'];
+
+    if (!isset($posts[$pid])) {
+        $posts[$pid] = get_post($pid);
+    }
+
+    return is_array($posts[$pid]) ? $posts[$pid] : array();
 }
 
 function social_meta_tags_absolute_url($url, $board_url)
