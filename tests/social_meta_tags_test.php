@@ -5,8 +5,11 @@ define('MYBB_ROOT', dirname(__DIR__) . '/');
 
 class SocialMetaTagsTestPlugins
 {
+    public $hooks = array();
+
     public function add_hook($hook, $callback)
     {
+        $this->hooks[$hook] = $callback;
     }
 }
 
@@ -115,6 +118,15 @@ function my_substr($value, $start, $length = null)
 
 function rebuild_settings()
 {
+}
+
+$social_meta_tags_template_replacements = array();
+
+function find_replace_templatesets($title, $find, $replace)
+{
+    global $social_meta_tags_template_replacements;
+
+    $social_meta_tags_template_replacements[] = array($title, $find, $replace);
 }
 
 function social_meta_tags_test_assert($condition, $message)
@@ -246,6 +258,118 @@ social_meta_tags_test_assert(
     'a thread image should fully replace the configured default'
 );
 
+$thread_images_disabled_settings = $settings;
+$thread_images_disabled_settings['social_meta_tags_enable_thread_images'] = '0';
+$thread_images_disabled_output = social_meta_tags_test_render(
+    $thread_images_disabled_settings,
+    array(),
+    array(
+        'tid' => 42,
+        'firstpost' => 100,
+        'subject' => 'Thread Title',
+    )
+);
+social_meta_tags_test_assert(
+    strpos($thread_images_disabled_output, 'https://cdn.example.com/thread-first.jpg') === false,
+    'disabled thread image metadata should ignore first-post images'
+);
+social_meta_tags_test_assert(
+    substr_count($thread_images_disabled_output, 'https://example.com/default.jpg') === 2,
+    'disabled thread image metadata should fall back to the default image'
+);
+
+$thread_default_description_settings = $settings;
+$thread_default_description_settings['social_meta_tags_thread_description_source'] = 'default';
+$thread_default_description_output = social_meta_tags_test_render(
+    $thread_default_description_settings,
+    array(),
+    array(
+        'tid' => 42,
+        'firstpost' => 100,
+        'subject' => 'Thread Title',
+    )
+);
+social_meta_tags_test_assert(
+    strpos($thread_default_description_output, 'content="Games  discussion"') !== false,
+    'thread description source can use the configured default description'
+);
+
+$board_page_title_settings = $settings;
+$board_page_title_settings['social_meta_tags_title_format'] = 'board_page';
+$board_page_title_output = social_meta_tags_test_render(
+    $board_page_title_settings,
+    array(),
+    array(
+        'tid' => 42,
+        'firstpost' => 100,
+        'subject' => 'Thread Title',
+    )
+);
+social_meta_tags_test_assert(
+    strpos($board_page_title_output, 'content="Example &amp; Board - Thread Title"') !== false,
+    'title format can put the board name first'
+);
+
+$forum_description_disabled_settings = $settings;
+$forum_description_disabled_settings['social_meta_tags_use_forum_descriptions'] = '0';
+$forum_description_disabled_output = social_meta_tags_test_render(
+    $forum_description_disabled_settings,
+    array('fid' => 5, 'name' => 'News', 'description' => 'Forum description')
+);
+social_meta_tags_test_assert(
+    strpos($forum_description_disabled_output, 'content="Games  discussion"') !== false,
+    'forum descriptions can be disabled'
+);
+
+$short_description_settings = $settings;
+$short_description_settings['social_meta_tags_max_description_length'] = '20';
+$short_description_output = social_meta_tags_test_render(
+    $short_description_settings,
+    array(),
+    array(
+        'tid' => 42,
+        'firstpost' => 100,
+        'subject' => 'Thread Title',
+    )
+);
+social_meta_tags_test_assert(
+    strpos($short_description_output, 'content="Release notes Thi..."') !== false,
+    'thread descriptions should honor the configured maximum length'
+);
+
+$metadata_options_settings = $settings;
+$metadata_options_settings['social_meta_tags_twitter_card_type'] = 'summary';
+$metadata_options_settings['social_meta_tags_enable_site_name'] = '1';
+$metadata_options_settings['social_meta_tags_locale'] = 'en_US';
+$metadata_options_settings['social_meta_tags_default_image_width'] = '1200';
+$metadata_options_settings['social_meta_tags_default_image_height'] = '630';
+$metadata_options_output = social_meta_tags_test_render($metadata_options_settings);
+social_meta_tags_test_assert(
+    strpos($metadata_options_output, 'name="twitter:card" content="summary"') !== false,
+    'twitter card type should be configurable'
+);
+social_meta_tags_test_assert(
+    strpos($metadata_options_output, 'property="og:site_name" content="Example &amp; Board"') !== false,
+    'site name metadata should be optional'
+);
+social_meta_tags_test_assert(
+    strpos($metadata_options_output, 'property="og:locale" content="en_US"') !== false,
+    'locale metadata should be optional'
+);
+social_meta_tags_test_assert(
+    strpos($metadata_options_output, 'property="og:image:width" content="1200"') !== false
+        && strpos($metadata_options_output, 'property="og:image:height" content="630"') !== false,
+    'default image dimensions should be optional'
+);
+
+$board_disabled_settings = $settings;
+$board_disabled_settings['social_meta_tags_enable_board'] = '0';
+$board_disabled_output = social_meta_tags_test_render($board_disabled_settings);
+social_meta_tags_test_assert(
+    strpos($board_disabled_output, 'og:title') === false,
+    'board metadata can be disabled for board-level pages'
+);
+
 $settings['social_meta_tags_default_image_url'] = '';
 $no_image_output = social_meta_tags_test_render($settings);
 social_meta_tags_test_assert(
@@ -253,17 +377,39 @@ social_meta_tags_test_assert(
     'an empty resolved image should omit both image tags'
 );
 
+$mybb = (object)array('settings' => array(
+    'bbname' => 'Installing Board',
+    'bburl' => 'https://install.example.com/forum',
+));
+$theme = array('logo' => 'images/logo.png');
 $db = new SocialMetaTagsTestDatabase();
 social_meta_tags_ensure_settings();
 social_meta_tags_test_assert(
-    count($db->settings) === 2,
-    'a new install should create both settings'
+    count($db->settings) === 15,
+    'a new install should create all settings'
+);
+social_meta_tags_test_assert(
+    $db->settings['social_meta_tags_default_description']['value'] === 'Installing Board',
+    'a new install should use the board name as the default description'
+);
+social_meta_tags_test_assert(
+    $db->settings['social_meta_tags_default_image_url']['value'] === 'https://install.example.com/forum/images/logo.png',
+    'a new install should use the active theme logo as the default image URL'
+);
+social_meta_tags_test_assert(
+    $db->settings['social_meta_tags_enable_thread_images']['value'] === '1',
+    'thread image metadata should default to enabled'
+);
+social_meta_tags_test_assert(
+    $db->settings['social_meta_tags_enable_site_name']['value'] === '1',
+    'site name metadata should default to enabled'
 );
 
 $db->settings['social_meta_tags_default_description']['value'] = 'Administrator description';
 $db->settings['social_meta_tags_default_description']['title'] = 'Outdated title';
 $db->settings['social_meta_tags_default_image_url']['value'] = 'https://example.com/custom.jpg';
 $db->settings['social_meta_tags_default_image_url']['gid'] = 99;
+$db->settings['social_meta_tags_twitter_card_type']['value'] = 'summary';
 social_meta_tags_ensure_settings();
 social_meta_tags_test_assert(
     $db->settings['social_meta_tags_default_description']['value'] === 'Administrator description',
@@ -272,6 +418,10 @@ social_meta_tags_test_assert(
 social_meta_tags_test_assert(
     $db->settings['social_meta_tags_default_image_url']['value'] === 'https://example.com/custom.jpg',
     'setting synchronization should preserve a custom image URL'
+);
+social_meta_tags_test_assert(
+    $db->settings['social_meta_tags_twitter_card_type']['value'] === 'summary',
+    'setting synchronization should preserve new custom options'
 );
 social_meta_tags_test_assert(
     $db->settings['social_meta_tags_default_description']['title'] === 'Default Meta Description'
@@ -284,6 +434,24 @@ social_meta_tags_ensure_settings();
 social_meta_tags_test_assert(
     serialize($db->settings) === $synchronized_settings,
     'repeated setting synchronization should be idempotent'
+);
+
+social_meta_tags_test_assert(
+    isset($plugins->hooks['admin_style_themes_add_commit'])
+        && isset($plugins->hooks['admin_style_themes_import_commit'])
+        && isset($plugins->hooks['admin_style_themes_duplicate_commit']),
+    'theme lifecycle hooks should be registered'
+);
+
+social_meta_tags_sync_headerinclude_templates();
+social_meta_tags_test_assert(
+    count($social_meta_tags_template_replacements) === 3,
+    'theme synchronization should perform fallback removal, duplicate removal, and insertion'
+);
+social_meta_tags_test_assert(
+    $social_meta_tags_template_replacements[2][0] === 'headerinclude'
+        && $social_meta_tags_template_replacements[2][2] === '{$social_meta_tags}{$stylesheets}',
+    'theme synchronization should insert the plugin variable before stylesheets'
 );
 
 echo "Social Meta Tags tests passed.\n";
