@@ -139,13 +139,14 @@ function social_meta_tags_test_assert($condition, $message)
 
 function social_meta_tags_test_render($settings, $forum_data = array(), $thread_data = array(), $foruminfo_data = array())
 {
-    global $mybb, $forum, $foruminfo, $thread, $social_meta_tags, $headerinclude;
+    global $mybb, $forum, $foruminfo, $thread, $social_meta_tags, $headerinclude, $social_meta_tags_page_context;
 
     $mybb = (object)array('settings' => $settings);
     $forum = array();
     $foruminfo = array();
     $thread = array();
     $social_meta_tags = '';
+    $social_meta_tags_page_context = array();
     $headerinclude = '';
     social_meta_tags_build();
     $headerinclude = "<head>\n" . $social_meta_tags . "</head>";
@@ -439,9 +440,70 @@ social_meta_tags_test_assert(
 social_meta_tags_test_assert(
     isset($plugins->hooks['admin_style_themes_add_commit'])
         && isset($plugins->hooks['admin_style_themes_import_commit'])
-        && isset($plugins->hooks['admin_style_themes_duplicate_commit']),
+        && isset($plugins->hooks['admin_style_themes_duplicate_commit'])
+        && isset($plugins->hooks['admin_style_themes_set_default_commit']),
     'theme lifecycle hooks should be registered'
 );
+
+social_meta_tags_test_assert(
+    isset($plugins->hooks['global_end'])
+        && isset($plugins->hooks['misc_help_helpdoc_end'])
+        && isset($plugins->hooks['misc_help_section_end'])
+        && isset($plugins->hooks['portal_start'])
+        && isset($plugins->hooks['stats_start'])
+        && isset($plugins->hooks['showteam_start']),
+    'runtime recovery and board page hooks should be registered'
+);
+
+social_meta_tags_test_render($settings);
+$headerinclude = '<link rel="stylesheet" href="theme.css" />';
+social_meta_tags_inject_runtime();
+social_meta_tags_inject_runtime();
+social_meta_tags_test_assert(
+    substr_count($headerinclude, 'property="og:title"') === 1
+        && strpos($headerinclude, 'property="og:title"') < strpos($headerinclude, '<link'),
+    'runtime recovery should prepend missing metadata once'
+);
+
+$lang = (object)array(
+    'nav_helpdocs' => 'Help Center',
+    'nav_portal' => 'Community Portal',
+    'nav_stats' => 'Community Statistics',
+    'nav_showteam' => 'Community Team'
+);
+$mybb = (object)array('settings' => $settings);
+$forum = array();
+$foruminfo = array();
+$thread = array();
+$social_meta_tags_page_context = array();
+$social_meta_tags = '';
+$headerinclude = '';
+social_meta_tags_build();
+social_meta_tags_inject_runtime();
+$helpdoc = array('hid' => 8, 'name' => 'Posting Help', 'description' => 'How to <b>post</b>');
+social_meta_tags_build_help_document();
+social_meta_tags_test_assert(
+    strpos($headerinclude, 'content="Posting Help - Example &amp; Board"') !== false
+        && strpos($headerinclude, 'content="How to post"') !== false
+        && strpos($headerinclude, 'content="https://example.com/misc.php?action=help&amp;hid=8"') !== false,
+    'help documents should use their own title, description, and URL'
+);
+
+$page_cases = array(
+    array('social_meta_tags_build_help_index', 'Help Center', 'misc.php?action=help'),
+    array('social_meta_tags_build_portal_page', 'Community Portal', 'portal.php'),
+    array('social_meta_tags_build_stats_page', 'Community Statistics', 'stats.php'),
+    array('social_meta_tags_build_team_page', 'Community Team', 'showteam.php')
+);
+
+foreach ($page_cases as $page_case) {
+    call_user_func($page_case[0]);
+    social_meta_tags_test_assert(
+        strpos($headerinclude, 'content="' . $page_case[1] . ' - Example &amp; Board"') !== false
+            && strpos($headerinclude, 'content="https://example.com/' . $page_case[2] . '"') !== false,
+        $page_case[1] . ' should use a page-specific title and URL'
+    );
+}
 
 social_meta_tags_sync_headerinclude_templates();
 social_meta_tags_test_assert(

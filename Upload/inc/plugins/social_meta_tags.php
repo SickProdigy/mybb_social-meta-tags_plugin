@@ -17,10 +17,10 @@ function social_meta_tags_info()
     return array(
         'name' => 'Social Meta Tags',
         'description' => 'Provides configurable Open Graph and Twitter metadata variables for MyBB templates.',
-        'website' => 'https://www.sickgaming.net',
+        'website' => 'https://github.com/sickprodigy/mybb_social-meta-tags_plugin',
         'author' => 'SickProdigy',
         'authorsite' => 'https://www.sickgaming.net',
-        'version' => '1.1.0',
+        'version' => '1.1.1',
         'compatibility' => '18*'
     );
 }
@@ -345,14 +345,108 @@ function social_meta_tags_default_image_url()
 }
 
 $plugins->add_hook('global_start', 'social_meta_tags_build');
+$plugins->add_hook('global_end', 'social_meta_tags_inject_runtime');
 $plugins->add_hook('forumdisplay_end', 'social_meta_tags_build');
 $plugins->add_hook('showthread_end', 'social_meta_tags_build');
+$plugins->add_hook('misc_help_helpdoc_end', 'social_meta_tags_build_help_document');
+$plugins->add_hook('misc_help_section_end', 'social_meta_tags_build_help_index');
+$plugins->add_hook('portal_start', 'social_meta_tags_build_portal_page');
+$plugins->add_hook('stats_start', 'social_meta_tags_build_stats_page');
+$plugins->add_hook('showteam_start', 'social_meta_tags_build_team_page');
 $plugins->add_hook('admin_style_themes_add_commit', 'social_meta_tags_sync_headerinclude_templates');
 $plugins->add_hook('admin_style_themes_import_commit', 'social_meta_tags_sync_headerinclude_templates');
 $plugins->add_hook('admin_style_themes_duplicate_commit', 'social_meta_tags_sync_headerinclude_templates');
+$plugins->add_hook('admin_style_themes_set_default_commit', 'social_meta_tags_sync_headerinclude_templates');
+
+function social_meta_tags_inject_runtime()
+{
+    global $headerinclude, $social_meta_tags;
+
+    if (empty($social_meta_tags) || !isset($headerinclude)) {
+        return;
+    }
+
+    if (strpos($headerinclude, $social_meta_tags) === false) {
+        $headerinclude = $social_meta_tags . $headerinclude;
+    }
+}
+
+function social_meta_tags_build_page($title, $relative_url, $description = '')
+{
+    global $social_meta_tags_page_context;
+
+    $social_meta_tags_page_context = array(
+        'title' => $title,
+        'url' => $relative_url,
+        'description' => $description
+    );
+    social_meta_tags_build();
+}
+
+function social_meta_tags_build_help_document()
+{
+    global $helpdoc;
+
+    if (empty($helpdoc['hid']) || empty($helpdoc['name'])) {
+        return;
+    }
+
+    social_meta_tags_build_page(
+        $helpdoc['name'],
+        'misc.php?action=help&hid=' . (int)$helpdoc['hid'],
+        !empty($helpdoc['description']) ? $helpdoc['description'] : ''
+    );
+}
+
+function social_meta_tags_build_help_index()
+{
+    social_meta_tags_build_page(
+        social_meta_tags_language_title(array('nav_helpdocs', 'help_docs'), 'Help Documents'),
+        'misc.php?action=help'
+    );
+}
+
+function social_meta_tags_build_portal_page()
+{
+    social_meta_tags_build_page(
+        social_meta_tags_language_title(array('nav_portal', 'portal'), 'Portal'),
+        'portal.php'
+    );
+}
+
+function social_meta_tags_build_stats_page()
+{
+    social_meta_tags_build_page(
+        social_meta_tags_language_title(array('nav_stats', 'board_stats'), 'Board Statistics'),
+        'stats.php'
+    );
+}
+
+function social_meta_tags_build_team_page()
+{
+    social_meta_tags_build_page(
+        social_meta_tags_language_title(array('nav_showteam', 'forum_team'), 'Forum Team'),
+        'showteam.php'
+    );
+}
+
+function social_meta_tags_language_title($keys, $fallback)
+{
+    global $lang;
+
+    foreach ($keys as $key) {
+        if (isset($lang->{$key}) && $lang->{$key} !== '') {
+            return $lang->{$key};
+        }
+    }
+
+    return $fallback;
+}
+
 function social_meta_tags_build()
 {
     global $thread, $forum, $foruminfo, $mybb, $headerinclude;
+    global $social_meta_tags_page_context;
     global $open_meta_title, $open_meta_description, $open_meta_url, $open_meta_type, $open_meta_image, $social_meta_tags;
 
     $previous_social_meta_tags = isset($social_meta_tags) ? $social_meta_tags : '';
@@ -372,6 +466,15 @@ function social_meta_tags_build()
     $open_meta_image = !empty($mybb->settings['social_meta_tags_default_image_url'])
         ? $mybb->settings['social_meta_tags_default_image_url']
         : '';
+
+    if (!$is_thread_page && empty($forum_context['fid']) && !empty($social_meta_tags_page_context['title'])) {
+        $open_meta_title = social_meta_tags_format_title($social_meta_tags_page_context['title'], $board_name);
+        $open_meta_url = social_meta_tags_absolute_url($social_meta_tags_page_context['url'], $board_url);
+
+        if (!empty($social_meta_tags_page_context['description'])) {
+            $open_meta_description = $social_meta_tags_page_context['description'];
+        }
+    }
 
     if (
         empty($forum_context['fid'])
@@ -467,8 +570,12 @@ function social_meta_tags_build()
         . '<meta name="twitter:description" content="' . $open_meta_description . '" />' . "\n"
         . $image_meta_tags;
 
-    if ($previous_social_meta_tags !== '' && isset($headerinclude)) {
-        $headerinclude = str_replace($previous_social_meta_tags, $social_meta_tags, $headerinclude);
+    if (isset($headerinclude)) {
+        if ($previous_social_meta_tags !== '' && strpos($headerinclude, $previous_social_meta_tags) !== false) {
+            $headerinclude = str_replace($previous_social_meta_tags, $social_meta_tags, $headerinclude);
+        } elseif ($social_meta_tags !== '' && strpos($headerinclude, $social_meta_tags) === false) {
+            $headerinclude = $social_meta_tags . $headerinclude;
+        }
     }
 }
 

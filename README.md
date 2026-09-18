@@ -4,14 +4,14 @@ MyBB 1.8 plugin that adds configurable Open Graph and Twitter Card metadata to b
 
 ## Features
 
-- Board-level metadata fallbacks for pages without forum or thread data.
+- Contextual metadata for Help, Portal, Statistics, and Forum Team pages, with board-level fallbacks elsewhere.
 - Forum titles, descriptions, and absolute forum URLs.
 - Thread titles, article type, absolute thread URLs, descriptions, and optional thread images.
 - Configurable default description, image URL, title format, Twitter card type, page-type behavior, and metadata extras in Admin CP.
 - New installs initialize fallback metadata from the board name and active theme logo when available.
 - MyBB friendly-URL support through `get_forum_link()` and `get_thread_link()`.
 - HTML-safe template values.
-- Automatic template synchronization when themes are added, imported, or duplicated while the plugin is active.
+- Automatic template synchronization when themes are added, imported, duplicated, or made default while the plugin is active.
 - One-time import of legacy `revolution_theme_default_meta` and `revolution_theme_logo_url` values when the new settings are first created.
 
 ## Requirements
@@ -31,7 +31,7 @@ Then install and activate `Social Meta Tags` under Admin CP → Configuration �
 
 ## Theme Integration
 
-Activation removes any marker-delimited fallback metadata block and inserts `{$social_meta_tags}` before `{$stylesheets}` in each theme's `headerinclude` template. The same synchronization runs when themes are added, imported, or duplicated while the plugin is active. The injected variable renders the configured Open Graph and Twitter metadata block. Deactivation removes the plugin variable and restores a basic fallback built from the board name, board URL, and active theme logo.
+Activation removes any marker-delimited fallback metadata block and inserts `{$social_meta_tags}` before `{$stylesheets}` in each theme's `headerinclude` template. The same synchronization runs when themes are added, imported, duplicated, or made default while the plugin is active. A runtime fallback also injects the generated block when a recreated theme is missing the template variable. Deactivation removes the plugin variable and restores a basic fallback built from the board name, board URL, and active theme logo.
 
 If a customized `headerinclude` template lacks `{$stylesheets}`, automatic insertion cannot run. Add this variable manually and remove any duplicate social metadata:
 
@@ -43,9 +43,9 @@ The individual `{$open_meta_*}` variables remain available for themes that need 
 
 ## Template Variables
 
-- `{$open_meta_title}` — board, forum, or thread title.
-- `{$open_meta_description}` — forum description, first-post excerpt, or configured default.
-- `{$open_meta_url}` — board, forum, or thread URL.
+- `{$open_meta_title}` — board page, forum, or thread title.
+- `{$open_meta_description}` — help document, forum, first-post, or configured default description.
+- `{$open_meta_url}` — board page, forum, or thread URL.
 - `{$open_meta_type}` — `website` or `article`.
 - `{$open_meta_image}` — thread image when enabled and available, otherwise the configured default image.
 

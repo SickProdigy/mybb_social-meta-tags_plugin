@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-09-17
+
+- Restored social metadata automatically when a recreated theme is made default, including a runtime fallback for missing template integration.
+- Added page-specific titles and URLs for Help, Portal, Statistics, and Forum Team pages, plus help document descriptions.
+- Updated the plugin website metadata to point to the project repository.
+
 ## 1.1.0 - 2026-09-08
 
 - Added Admin CP options for Twitter card type, social title format, page-type metadata toggles, forum description usage, thread description source, maximum description length, thread image metadata, site name, optional locale, and default image dimensions.
