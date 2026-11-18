@@ -20,7 +20,7 @@ function social_meta_tags_info()
         'website' => 'https://github.com/sickprodigy/mybb_social-meta-tags_plugin',
         'author' => 'SickProdigy',
         'authorsite' => 'https://www.sickgaming.net',
-        'version' => '1.1.1',
+        'version' => '1.1.2',
         'compatibility' => '18*'
     );
 }
@@ -342,6 +342,28 @@ function social_meta_tags_default_image_url()
     }
 
     return social_meta_tags_absolute_url($theme['logo'], rtrim($mybb->settings['bburl'], '/'));
+}
+
+// MyBB can be required inside a function, while hook output lives in globals.
+$plugins->add_hook('global_intermediate', 'social_meta_tags_prepare_template_scope');
+function social_meta_tags_prepare_template_scope()
+{
+    global $templates;
+
+    foreach (array('social_meta_tags') as $name) {
+        if (!isset($GLOBALS[$name])) {
+            $GLOBALS[$name] = '';
+        }
+        foreach (array('headerinclude', 'index') as $template) {
+            if (isset($templates->cache[$template])) {
+                $templates->cache[$template] = str_replace(
+                    '{$' . $name . '}',
+                    '{$GLOBALS[\'' . $name . '\']}',
+                    $templates->cache[$template]
+                );
+            }
+        }
+    }
 }
 
 $plugins->add_hook('global_start', 'social_meta_tags_build');

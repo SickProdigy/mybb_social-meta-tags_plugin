@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 - 2026-11-18
+
+- Resolve plugin template output through globals when MyBB is included inside a function, preventing undefined-variable warnings (#12).
+
 ## 1.1.1 - 2026-09-17
 
 - Restored social metadata automatically when a recreated theme is made default, including a runtime fallback for missing template integration.
